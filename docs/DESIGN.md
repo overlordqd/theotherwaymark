@@ -225,6 +225,18 @@ Rare, never explained, one or two a day:
 - **Waking in the tent:** it is pitch black, because you were asleep; only natural light through the fabric, and your phone when you tap it. In the tent: phone, wallet, compact camera, bag, water bottle, headlamp. You find the headlamp to see, crawl to the door, unzip and look outside with the beam.
 - **Getting up at night:** a beer by the fire, an early night, and the need to pee wakes you. Outside it is pitch black (no moon) and the stars are overwhelming. Sometimes the sky does something it should not: an aurora this far south, with heavenly music.
 
+## The warm side (owner, 2026-11-24)
+
+Most of the game is warm and ordinary, and it needs as much care as the strange part.
+- **Places to stay:** a family-run lodge with a restaurant and rooms (Cindy's family: mum cooks, dad bakes, Cindy does everything else); a friendly hostel with a talkative owner; small inns. Hot food, a bed, a drying room, local gossip and weather lore.
+- **People who just live here:** innkeepers, hostel owners, a shepherd, a ferryman; most of them never touch the mystery.
+- **Traces of the past:** the valley's forgotten logging industry: a rusted steam winch, cable runs, a collapsed loading ramp, rails in the moss, all taken back by forest.
+- **Small pleasures:** sun glinting off the creek and the lake, a kestrel hovering and calling over the meadow, stones skittering away from your boots, chimney smoke, flowers, a view after a climb.
+
+## Pacing of important events (owner, 2026-11-24)
+
+Lower frequency. A playthrough day has at most one strange thing, often none, and it is small and easy to miss (a faded mark you only see if you look). Big events (the record, the tent at night, the aurora) are rare, days apart, and never two in one day.
+
 ## Working agreement
 
 The owner directs and reviews; Claude builds. The owner is a web developer new to game code and may touch up parts later, so keep the code readable and explain non-obvious game techniques in comments. Desktop (keyboard and mouse) comes first; touch follows.
@@ -232,7 +244,7 @@ The owner directs and reviews; Claude builds. The owner is a web developer new t
 ## Roadmap
 
 1. **Project setup** (done): Vite, TypeScript, showreel in the repo, Pages deploy.
-2. **First playable slice, one day in one valley (about 20 minutes):**
+2. **First playable slice, one day in one valley.** v0.1 (2026-11-24) is playable: walking, the lodge and Cindy, the creek and deer that flee, the kestrel, the blue mark, Thalia, the view, the logging winch, the headlamp, camp at the lake, the journal. Still to do from this list:
    1. walking with keyboard and mouse, third-person camera, following waymarks;
    2. tiredness, the clock, the headlamp on a key;
    3. noticing (look at things to log them), photos, binoculars;

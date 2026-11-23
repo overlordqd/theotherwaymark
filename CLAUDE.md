@@ -5,8 +5,14 @@ A quiet hiking game with a mystery, in the browser. The full design is in `docs/
 ## Where things are
 
 ```
-index.html          landing page (links to the showreel until the game is playable)
-src/main.ts         landing page script; the game entry will live in src/
+index.html          the game page (start screen, HUD, journal, pause and end sheets)
+src/main.ts         the game: setup, day clock, noticing, conversations, camp, main loop
+src/game/           modules: util, render (pixel look), world (terrain, creek, lake, village,
+                    lodge, logging winch, trees, waymarks, sky), sky (time of day and light),
+                    figures (people, animals, tent, fire, walk cycle, looking), player
+                    (controls, camera, energy, headlamp, kicked stones), wildlife (deer, kestrel),
+                    people (Cindy, Thalia), audio (soundscape, birds, music), ui (captions,
+                    conversations, journal)
 showreel/index.html the working prototype: one self-contained page, about 5 minutes,
                     plays by itself. Reference for look, sound and pacing.
 docs/DESIGN.md      design: tone, world, systems, wildlife, weather, music, mystery, roadmap
@@ -24,7 +30,7 @@ docs/CHARACTERS.md  the thirteen people of the valley: who they are, what they k
 
 There is no audio output in the cloud container: check that sound code runs without errors, and say plainly that it has not been listened to.
 
-For visuals, render headless with Playwright and swiftshader, `chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] })`, and look at screenshots. When the CDN is blocked, route `https://cdnjs.cloudflare.com/**` to `node_modules/three/build/three.min.js`. The showreel exposes `window.__reel.jump(scene, seconds)`, `seek(seconds)` and `state()` for this.
+For visuals, render headless with Playwright and swiftshader, `chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] })`, and look at screenshots. When the CDN is blocked, route `https://cdnjs.cloudflare.com/**` to `node_modules/three/build/three.min.js`. The showreel exposes `window.__reel.jump(scene, seconds)`, `seek(seconds)` and `state()` for this. The game exposes `window.__game` with `state()`, `teleport(u)` (0 = village, 1 = lake), `setHour(h)`, `talk()`, `pitch()` and `thaliaTo(u)`. Headless rendering runs at a few frames a second, so time-based things (people walking) move slowly in tests.
 
 ## Rules (ask the owner before changing)
 
