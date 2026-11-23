@@ -7,7 +7,7 @@ A quiet hiking game with a mystery, in the browser. The full design is in `docs/
 ```
 index.html          landing page (links to the showreel until the game is playable)
 src/main.ts         landing page script; the game entry will live in src/
-showreel/index.html the working prototype: one self-contained page, about 4 minutes,
+showreel/index.html the working prototype: one self-contained page, about 5 minutes,
                     plays by itself. Reference for look, sound and pacing.
 docs/DESIGN.md      design: tone, world, systems, music modes, mystery, roadmap
 .github/workflows/pages.yml  builds and deploys to GitHub Pages on pushes to main
@@ -27,7 +27,8 @@ For visuals, render headless with Playwright and swiftshader, `chromium.launch({
 
 ## Rules (ask the owner before changing)
 
-- **Tone:** mostly warm, sometimes wrong. Unease, never danger: no monsters, no game over, no jump scares. Never explain the strange things.
+- **Tone:** mostly warm, sometimes wrong. Unease, never danger: no monsters, no game over, no jump scares. Never explain the strange things. The world is supernatural, mystical and cosmic: strange can be wondrous as well as unsettling.
+- **Pacing:** uncanny events do not happen every day; a strange night every few days at most.
 - **Generated, not downloaded:** terrain, names and all sound come from code and a seed. Any recorded audio or art added later must be our own or properly licensed.
 - **Music follows the mood through modes** (see the table in the design). Phrygian and Locrian are kept for the uneasy moments so they keep their effect.
 - **Real cases are inspiration only.** The SD card thread is inspired by found-camera cases; never use real names, photos or stories in the game.

@@ -50,7 +50,8 @@ The hiker turns head and a little of the body toward anything worth noticing: an
 
 ### Days, moon and seasons
 - A day is about 20 real minutes. A year is compressed to 30–40 game days.
-- Full moon lets you walk at night without a lamp; some events only happen near it.
+- Full moon lets you walk at night without a lamp; some events only happen near it. On a new moon the sky is black, the stars and the galaxy band come out, and you need the headlamp in the open too.
+- A campfire counts as light: sitting by it, the hiker switches the headlamp off.
 - Seasons change the map (snow closes passes, spring melt swells crossings) and the journal (who you can meet).
 
 ### Sleeping
@@ -90,8 +91,13 @@ Guitar arpeggios and strums (Karplus-Strong) over a slow, filtered synth pad.
 | evening | Aeolian | melancholy |
 | mark | Phrygian | something is off (blue marks, painted waymark, a warning) |
 | forest, dread | Locrian | the dark and the unknown; pad only at the worst moments |
+| heaven | Lydian, high, slow, soft triangle pad | wonder: the aurora |
 
-No music at night outside; silence and the soundscape do the work.
+No music at night outside except for wonder; silence and the soundscape do the work.
+
+**Atmosphere layer.** A low, slowly filtered synth bed (a tritone over a sub bass) swells only in the high-intensity moments: the record in the trees, footsteps around the tent, the last photo on the SD card. Otherwise it stays silent; the ambience is right as it is.
+
+**Owner notes on sound (2026-11-23):** ambience levels are good. The old tent-shaking sound (sharp noise clicks) was not; it is now soft nylon rustle with low thumps of the fabric pulling taut.
 
 ## The mystery (draft)
 
@@ -99,7 +105,10 @@ No music at night outside; silence and the soundscape do the work.
 
 **The SD card.** Found in the dirt early on. You try to find the owner in the next villages; innkeepers recognise the hiker in the early photos and give you a name and route. The later photos line up with places you have walked, and the last one shows your own camp, from the trees, from tonight. Inspired by the feeling of found-camera cases (Kris Kremers and Lisanne Froon, Panama, 2014) but fully our own fiction: never recreate real people, their photos or their story.
 
-**Open question:** grounded (a human answer) or slightly supernatural. Undecided; events are written so both stay possible.
+**Decided (owner, 2026-11-23): supernatural, mystical, cosmic.** Not everything in this world is explainable, and the game never tries. Strange things can be wondrous (an aurora where none is possible) as well as unsettling (something walking around the tent). Keep both registers: awe and unease.
+
+### Pacing of strange things
+Uncanny events do not happen every day. Most days are warm and ordinary; a strange night comes every few days at most, and a wondrous one can come on a quiet day. The showreel shows this: day 1 ends in wonder (the aurora), the uncanny events come on day 3.
 
 ### Peculiar events on the road
 Rare, never explained, one or two a day:
@@ -112,6 +121,14 @@ Rare, never explained, one or two a day:
 - a hiker seen ahead of you after they went the other way;
 - a hut logbook whose last entry is in your handwriting;
 - at night: a record playing in the trees that starts skipping; a light high on the mountain; footsteps circling the tent; a deep call echoing from far away; a tap on the fabric by your head.
+
+### Nights
+- **Waking in the tent:** it is pitch black, because you were asleep; only natural light through the fabric, and your phone when you tap it. In the tent: phone, wallet, compact camera, bag, water bottle, headlamp. You find the headlamp to see, crawl to the door, unzip and look outside with the beam.
+- **Getting up at night:** a beer by the fire, an early night, and the need to pee wakes you. Outside it is pitch black (no moon) and the stars are overwhelming. Sometimes the sky does something it should not: an aurora this far south, with heavenly music.
+
+## Working agreement
+
+The owner directs and reviews; Claude builds. The owner is a web developer new to game code and may touch up parts later, so keep the code readable and explain non-obvious game techniques in comments. Desktop (keyboard and mouse) comes first; touch follows.
 
 ## Roadmap
 

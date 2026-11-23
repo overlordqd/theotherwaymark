@@ -48,6 +48,8 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 #energy { display: flex; gap: 3px; }
 #energy i { width: 9px; height: 6px; background: var(--ink); opacity: 0.9; box-shadow: 0 1px 2px var(--shade); }
 #energy i.off { opacity: 0.18; }
+#moon.new { background: transparent; box-shadow: inset 0 0 0 1px var(--ink-dim); }
+#moon.crescent { background: transparent; box-shadow: inset -3px 0 0 0 var(--ink); }
 #moon { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 6px var(--ink-dim); }
 #lamp { opacity: 0.45; transition: opacity 0.3s; }
 #lamp.on { opacity: 1; color: var(--ink); }
@@ -116,9 +118,9 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 <div id="flash"></div>
 
 <div id="hud" hidden>
-  <div class="clock"><span>Day 1</span> · <span id="clock">06:00</span></div>
+  <div class="clock"><span id="day">Day 1</span> · <span id="clock">06:00</span></div>
   <div class="row">Energy <span id="energy"><i></i><i></i><i></i><i></i><i></i></span></div>
-  <div class="row"><span id="moon"></span> Full moon <span id="lamp">· Headlamp off</span></div>
+  <div class="row"><span id="moon"></span> <span id="moonTxt">New moon</span> <span id="lamp">· Headlamp off</span></div>
 </div>
 
 <div id="titlecard"><h1>The Other Waymarks</h1><p>Day 1 · late August</p></div>
@@ -142,7 +144,7 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 <div class="overlay start" id="start">
   <div class="panel">
     <h1>The Other Waymarks</h1>
-    <p>A first look at a hiking game in the making. One day on a marked trail, from dawn to a full-moon night. About four minutes. It plays by itself, and you can answer when someone talks to you.</p>
+    <p>A first look at a hiking game in the making. One day on a marked trail, from dawn to a full-moon night. About five minutes. It plays by itself, and you can answer when someone talks to you.</p>
     <button class="go" id="bBegin" type="button">Begin the walk</button>
     <p class="meta">Headphones on. Sound carries half of it.<br><span id="seedLine"></span></p>
   </div>
@@ -390,29 +392,33 @@ function makeTent() {
 
 function makeTentInside() {
   const w = 0.98, h = 1.07, l = 1.14, g = new THREE.Group(), inner = new THREE.Group(); g.add(inner);
-  const P = [], Cc = [];
-  const tri = (a, b, c, ca, cb, cc) => { P.push(...a, ...b, ...c); Cc.push(...ca, ...cb, ...cc); };
-  const lit = hx('#7c4526'), litLo = hx('#4b2a17'), dim = hx('#3a2215'), dimLo = hx('#1f130c'), door = hx('#4e2c19'), backC = hx('#2c1a10');
-  const R0f = [w, 0, l], R0b = [w, 0, -l], Tf = [0, h, l], Tb = [0, h, -l], L0f = [-w, 0, l], L0b = [-w, 0, -l];
-  tri(R0f, R0b, Tb, litLo, litLo, lit); tri(R0f, Tb, Tf, litLo, lit, lit);
-  tri(L0f, Tb, L0b, dimLo, dim, dimLo); tri(L0f, Tf, Tb, dimLo, dim, dim);
-  tri(L0f, R0f, Tf, door, door, mix3(door, lit, 0.3)); tri(L0b, Tb, R0b, backC, backC, backC);
-  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(Cc, 3));
-  inner.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: false })));
-  const flat = (wd, ht, dp, c, x, y, z, par) => { const m = new THREE.Mesh(new THREE.BoxGeometry(wd, ht, dp), new THREE.MeshBasicMaterial({ color: c, fog: false })); m.position.set(x, y, z); (par || g).add(m); return m; };
-  flat(w * 2, 0.01, l * 2, '#17110d', 0, 0.005, 0);
-  flat(0.015, h * 0.82, 0.01, '#120a06', 0, h * 0.41, l - 0.012, inner);
-  flat(0.74, 0.2, 1.5, '#1d3226', 0.12, 0.1, -0.12);
-  flat(0.34, 0.45, 0.22, '#3b2312', -0.6, 0.22, 0.72);
-  flat(0.18, 0.1, 0.24, '#2a2a2c', 0.55, 0.05, 0.6);
-  const lampPivot = new THREE.Group(); lampPivot.position.set(0, h - 0.03, 0.25); inner.add(lampPivot);
-  flat(0.008, 0.2, 0.008, '#2a2420', 0, -0.1, 0, lampPivot); flat(0.07, 0.05, 0.05, '#1a1a1c', 0, -0.22, 0, lampPivot);
-  const sMat = new THREE.MeshBasicMaterial({ map: SIL_TEX, transparent: true, opacity: 0, depthWrite: false, fog: false });
-  const pivot = new THREE.Group(); pivot.position.set(w, 0, 0); pivot.rotation.z = Math.atan2(w, h); inner.add(pivot);
-  const sg = new THREE.PlaneGeometry(0.75, 1.1); sg.rotateY(-Math.PI / 2);
-  const shadow = new THREE.Mesh(sg, sMat); shadow.position.set(-0.02, 0.6, 0); pivot.add(shadow);
+  const nylon = new THREE.MeshLambertMaterial({ color: 0xb8662f, emissive: 0x080403, side: THREE.DoubleSide });
+  const R0f = [w, 0, l], R0b = [w, 0, -l], Tf = [0, h, l], Tb = [0, h, -l], L0f = [-w, 0, l], L0b = [-w, 0, -l], P = [];
+  [[R0f, R0b, Tb], [R0f, Tb, Tf], [L0f, Tb, L0b], [L0f, Tf, Tb], [L0b, Tb, R0b]].forEach(t => t.forEach(v => P.push(...v)));
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.computeVertexNormals();
+  inner.add(new THREE.Mesh(geo, nylon));
+  /* the door flap, hinged along its left edge */
+  const doorPivot = new THREE.Group(); doorPivot.position.set(L0f[0], L0f[1], L0f[2]); inner.add(doorPivot);
+  const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 2 * w, 0, 0, w, h, 0], 3)); dg.computeVertexNormals();
+  doorPivot.add(new THREE.Mesh(dg, nylon));
+  const zip = new THREE.Mesh(new THREE.BoxGeometry(0.015, h * 0.8, 0.01), lam('#1a120c')); zip.position.set(w, h * 0.4, 0.006); doorPivot.add(zip);
+  const doorAxis = v3(w, h, 0).normalize();
+  const L = (wd, ht, dp, c, x, y, z, par) => { const m = new THREE.Mesh(new THREE.BoxGeometry(wd, ht, dp), lam(c)); m.position.set(x, y, z); (par || g).add(m); return m; };
+  L(w * 2, 0.01, l * 2, '#2a241e', 0, 0.005, 0);
+  L(0.74, 0.18, 1.5, '#2d5040', 0.12, 0.09, -0.12);
+  L(0.36, 0.46, 0.24, '#a65f1c', -0.6, 0.23, 0.72); L(0.36, 0.08, 0.26, '#7a4514', -0.6, 0.48, 0.72); L(0.26, 0.2, 0.06, '#7a4514', -0.6, 0.2, 0.86);
+  const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.22, 8), lam('#b9c9cf')); bottle.position.set(-0.74, 0.11, 0.36); g.add(bottle);
+  L(0.18, 0.1, 0.27, '#4a3424', 0.55, 0.05, 0.62); L(0.18, 0.1, 0.27, '#4a3424', 0.33, 0.05, 0.72);
+  const phone = L(0.075, 0.012, 0.15, '#111114', -0.48, 0.012, -0.38); phone.rotation.y = 0.3;
+  const phoneMat = new THREE.MeshBasicMaterial({ color: 0x000000 }); const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.065, 0.135), phoneMat); scr.rotation.x = -Math.PI / 2; scr.position.y = 0.007; phone.add(scr);
+  L(0.1, 0.022, 0.085, '#5a3a24', -0.64, 0.012, -0.1).rotation.y = -0.2;
+  const cam = L(0.11, 0.065, 0.045, '#2c2d30', -0.46, 0.034, 0.12); cam.rotation.y = 0.5;
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.03, 10), lam('#151517')); lens.rotation.x = Math.PI / 2; lens.position.z = 0.035; cam.add(lens);
+  const lampItem = new THREE.Group(); lampItem.position.set(-0.36, 0.02, -0.62); g.add(lampItem);
+  L(0.07, 0.045, 0.04, '#1a1a1c', 0, 0.02, 0, lampItem); L(0.22, 0.012, 0.03, '#3a3630', 0.07, 0.006, 0.02, lampItem);
+  const phoneLight = new THREE.PointLight(0x9fb8ff, 0, 1.8, 2); phoneLight.position.set(-0.48, 0.16, -0.38); g.add(phoneLight);
   g.visible = false;
-  return { g, inner, lampPivot, shadow, sMat, swing: 0, swingV: 0 };
+  return { g, inner, doorPivot, doorAxis, phoneMat, phoneLight, lampItem };
 }
 
 /* ---------- the world ---------- */
@@ -796,7 +802,48 @@ function buildWorld(seed) {
     tentPos.y = top + 0.03; tent.g.position.y = tentPos.y; }
   const inside = makeTentInside(); inside.g.position.copy(tentPos); inside.g.rotation.y = tent.g.rotation.y; scene.add(inside.g);
   const camProp = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.09, 0.06), lam('#1c1c1e')); camProp.position.set(-0.12, -0.34, 0.08); hiker.arms[1].el.add(camProp); camProp.visible = false; hiker.camProp = camProp;
+  const beer = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.12, 8), lam('#3f6e4f')); beer.position.set(0.02, -0.36, 0.07); hiker.arms[1].el.add(beer); beer.visible = false; hiker.beer = beer;
   const flash = new THREE.PointLight(0xffffff, 0, 40, 1.4); scene.add(flash);
+  /* the headlamp in your hand, inside the tent */
+  const handLamp = new THREE.SpotLight(0xfff0d6, 0, 26, 0.55, 0.5, 1.2); scene.add(handLamp, handLamp.target);
+  const handFill = new THREE.PointLight(0xffe2c0, 0, 2.6, 2); scene.add(handFill);
+  /* a rock by the tent door; on the last night it carries a fresh blue mark */
+  const doorDir = v3(-Fp.x, 0, -Fp.z);
+  const tmr = v3(tentPos.x + doorDir.x * 4.3 + F.x * 0.8, 0, tentPos.z + doorDir.z * 4.3 + F.z * 0.8); tmr.y = heightAt(tmr.x, tmr.z);
+  const rk2 = new THREE.Mesh(facet(new THREE.DodecahedronGeometry(1, 0)), lam('#8a8479')); rk2.scale.set(0.75, 0.6, 0.75); rk2.position.set(tmr.x, tmr.y + 0.2, tmr.z); scene.add(rk2);
+  const tyaw = Math.atan2(tentPos.x - tmr.x, tentPos.z - tmr.z);
+  const tentMark = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.05), new THREE.MeshLambertMaterial({ color: 0x2f5fb0, emissive: 0x050a18 }));
+  tentMark.position.set(tmr.x + Math.sin(tyaw) * 0.68, tmr.y + 0.45, tmr.z + Math.cos(tyaw) * 0.68); tentMark.rotation.y = tyaw; tentMark.visible = false; scene.add(tentMark);
+  /* aurora: three curtains over the ridge behind the forest */
+  const lakeDir = v3(LAKE.x - end.x, 0, LAKE.z - end.z).normalize();
+  const aurora = new THREE.Group(), aMats = [];
+  for (let k = 0; k < 3; k++) {
+    const ag = new THREE.PlaneGeometry(1700, 420, 160, 1); ag.translate(0, 210, 0);
+    const am = new THREE.ShaderMaterial({
+      uniforms: { time: { value: 0 }, level: { value: 0 }, seed: { value: k * 7.3 } },
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false,
+      vertexShader: `uniform float time, seed; varying vec2 vUv;
+        void main(){ vUv = uv; vec3 p = position;
+          p.z += sin(p.x * 0.006 + time * 0.12 + seed) * 60.0 + sin(p.x * 0.017 - time * 0.2 + seed * 2.0) * 22.0;
+          p.y += sin(p.x * 0.004 + time * 0.1 + seed) * 25.0;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }`,
+      fragmentShader: `uniform float time, level, seed; varying vec2 vUv;
+        float hh(float x){ return fract(sin(x * 12.9898 + seed) * 43758.5453); }
+        float nn(float x){ float i = floor(x), f = fract(x); return mix(hh(i), hh(i + 1.0), f * f * (3.0 - 2.0 * f)); }
+        void main(){
+          float x = vUv.x * 90.0, y = vUv.y;
+          float rays = 0.35 + nn(x + time * 0.5) * 0.45 + nn(x * 3.1 - time * 0.8) * 0.35;
+          float body = smoothstep(0.0, 0.06, y) * (1.0 - smoothstep(0.1, 1.0, y));
+          float edge = exp(-y * 9.0) * smoothstep(0.0, 0.02, y);
+          vec3 col = mix(vec3(0.25, 1.0, 0.55), vec3(0.6, 0.25, 0.85), smoothstep(0.25, 0.95, y));
+          float a = (body * 0.55 + edge * 0.9) * rays * level;
+          a *= smoothstep(0.0, 0.15, vUv.x) * (1.0 - smoothstep(0.85, 1.0, vUv.x));
+          a *= 0.7 + 0.3 * sin(time * 0.35 + vUv.x * 7.0 + seed);
+          gl_FragColor = vec4(col * a, 1.0); }`
+    });
+    const mesh = new THREE.Mesh(ag, am); mesh.position.set((k - 1) * 160, 70 + k * 30, 560 + k * 90); mesh.rotation.y = (k - 1) * 0.18; mesh.renderOrder = -7; aurora.add(mesh); aMats.push(am);
+  }
+  aurora.rotation.y = Math.atan2(lakeDir.x, lakeDir.z); aurora.visible = false; scene.add(aurora);
   const log = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 1.4, 7), lam('#5c4632')); log.rotation.order = 'YZX'; log.rotation.y = Math.atan2(F.x, F.z); log.rotation.z = Math.PI / 2; log.position.set(sitPos.x - F.x * 0.12, sitPos.y + 0.2, sitPos.z - F.z * 0.12); scene.add(log);
 
   const fire = new THREE.Group(); fire.position.copy(firePos); scene.add(fire);
@@ -830,12 +877,22 @@ function buildWorld(seed) {
   sgm.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
   const stars = new THREE.Points(sgm, new THREE.PointsMaterial({ color: 0xe8ecff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
   stars.renderOrder = -9; scene.add(stars);
+  /* the band of the galaxy, only on dark nights */
+  const mg = new THREE.BufferGeometry(), mp = [], tilt = rnd() * 0.6 + 0.4;
+  for (let k = 0; k < 2600; k++) {
+    const a = rnd() * 6.283, off = (rnd() + rnd() + rnd() - 1.5) * 0.16;
+    let x = Math.cos(a), y = Math.sin(a) * Math.cos(tilt) + off, z = Math.sin(a) * Math.sin(tilt) - off * 0.5; const ln = Math.hypot(x, y, z); x /= ln; y /= ln; z /= ln;
+    if (y < 0.03) continue; mp.push(x * 990, y * 990, z * 990);
+  }
+  mg.setAttribute('position', new THREE.Float32BufferAttribute(mp, 3));
+  const milky = new THREE.Points(mg, new THREE.PointsMaterial({ color: 0xd8dcff, size: 1.1, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+  milky.renderOrder = -9; scene.add(milky);
   const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: MOON_TEX, transparent: true, fog: false, depthWrite: false, opacity: 0 })); moon.scale.set(150, 150, 1); moon.renderOrder = -8; scene.add(moon);
   const hemi = new THREE.HemisphereLight(0xffffff, 0x404040, 0.7); scene.add(hemi);
   const dir = new THREE.DirectionalLight(0xffffff, 1); scene.add(dir, dir.target);
   scene.fog = new THREE.FogExp2(0xcccccc, 0.005);
 
-  W = { seed, town, lakeName, heightAt, groundAt, rp, L, M, T, LAKE: v3(LAKE.x, waterY, LAKE.z), TOWN, waterY, end, F, Fp, firePos, sitPos, tentPos, recordPos, ridgePos, hiker, moth, deer, fox, tent, fire, flame, flame2, fireGlow, fireLight, embers, emberP, emberG, emberLife: Array.from({ length: 30 }, () => rand()), ridgeLight, sky, stars, moon, hemi, dir, winMat, lampLight, flowerMat, waterMat, creekMat, water, markU, stop, rs, markRock, climbU, meetU, shoulderU, firstCross, streamAt, streamPts, forestAt, treeSets, trailDist, fireOn: 0, paintPost, glint, sdU, inside, flash };
+  W = { seed, town, lakeName, heightAt, groundAt, rp, L, M, T, LAKE: v3(LAKE.x, waterY, LAKE.z), TOWN, waterY, end, F, Fp, firePos, sitPos, tentPos, recordPos, ridgePos, hiker, moth, deer, fox, tent, fire, flame, flame2, fireGlow, fireLight, embers, emberP, emberG, emberLife: Array.from({ length: 30 }, () => rand()), ridgeLight, sky, stars, moon, hemi, dir, winMat, lampLight, flowerMat, waterMat, creekMat, water, markU, stop, rs, markRock, climbU, meetU, shoulderU, firstCross, streamAt, streamPts, forestAt, treeSets, trailDist, fireOn: 0, paintPost, glint, sdU, inside, flash, handLamp, handFill, tentMark, tentRock: tmr, aurora, aMats, milky, auroraLevel: 0, lakeDir };
   $('#seedLine').textContent = 'Valley ' + seed + ' · ' + town;
   $('#seedLine2').textContent = 'You watched valley ' + seed + ', starting at ' + town + '.';
 }
@@ -857,7 +914,7 @@ const KEYS = [
 const tA = new THREE.Color(), tB = new THREE.Color(), tC = new THREE.Color(), tD = new THREE.Color();
 const sunDir = new THREE.Vector3(), moonDir = new THREE.Vector3();
 let nightF = 0, HOUR = 6, canopyCam = 0, canopyHiker = 0;
-const MOONLIGHT = 0.45; /* full moon; a new moon would be about 0.05, and the headlamp would come on in the open too */
+let MOONLIGHT = 0.45, moonVis = 1; /* full moon; a new moon would be about 0.05, and the headlamp would come on in the open too */
 function applyTime(hour) {
   HOUR = hour;
   let i = 0; while (i < KEYS.length - 2 && KEYS[i + 1][0] <= hour) i++;
@@ -871,15 +928,21 @@ function applyTime(hour) {
   canopyCam = W.forestAt(camera.position.x, camera.position.z);
   const dayLight = smooth(-0.16, 0.22, sunDir.y), shade = canopyCam * (0.4 + 0.4 * (1 - dayLight));
   const dark = 1 - shade;
+  /* a moonless night is darker: sky, fog and ambient fall toward black */
+  const moonK = MOONLIGHT / 0.45, moonDim = lerp(1, 0.42, nightF * (1 - moonK));
+  tA.multiplyScalar(moonDim); tB.multiplyScalar(moonDim); tD.multiplyScalar(moonDim);
   const s = W.sky.material.uniforms; s.top.value.copy(tA); s.hor.value.copy(tB); s.sunDir.value.copy(sunDir); s.sunCol.value.copy(tC); s.sunVis.value = 1 - nightF;
   scene.fog.color.copy(tB).multiplyScalar(0.92 * (1 - 0.7 * shade));
   scene.fog.density = lerp(0.0042, 0.0062, nightF) + shade * 0.014;
   W.hemi.color.copy(tD); W.hemi.groundColor.copy(tD).multiplyScalar(0.45); W.hemi.intensity = ai * dark;
-  W.dir.color.copy(tC); W.dir.intensity = li * Math.max(0, 1 - 1.1 * shade);
+  W.dir.color.copy(tC); W.dir.intensity = li * Math.max(0, 1 - 1.1 * shade) * lerp(1, moonK, nightF);
   const ld = nightF > 0.5 ? moonDir : sunDir;
   W.dir.target.position.copy(camera.position); W.dir.position.copy(camera.position).addScaledVector(ld, 200);
-  W.stars.material.opacity = smooth(0.55, 1, nightF) * 0.9 * (1 - canopyCam * 0.7);
-  W.moon.material.opacity = smooth(0.3, 0.9, nightF);
+  W.stars.material.opacity = smooth(0.55, 1, nightF) * lerp(0.9, 1, 1 - moonK) * (1 - canopyCam * 0.7);
+  W.milky.material.opacity = smooth(0.6, 1, nightF) * (1 - moonK) * 0.6 * (1 - canopyCam * 0.8);
+  /* the aurora tints the ground green */
+  if (W.auroraLevel > 0) { W.hemi.color.lerp(tA.set(0x3fd08a), W.auroraLevel * 0.45); W.hemi.intensity += W.auroraLevel * 0.22; }
+  W.moon.material.opacity = smooth(0.3, 0.9, nightF) * moonVis;
   W.moon.position.copy(camera.position).addScaledVector(moonDir, 900);
   W.winMat.color.set(0x39404c).lerp(tA.set(0xffc66e), smooth(0.25, 0.8, nightF));
   W.lampLight.intensity = smooth(0.3, 0.9, nightF) * 1.4;
@@ -925,6 +988,11 @@ function audioInit() {
     recLp.connect(dl); dl.connect(dlp); dlp.connect(fb); fb.connect(dl); dlp.connect(eo); eo.connect(AU.recPan.input);
     AU.tentPan = spatial(); AU.walkPan = spatial();
     AU.musicBus = ctx.createGain(); AU.musicBus.gain.value = 0; AU.musicBus.connect(master); const ms = ctx.createGain(); ms.gain.value = 0.35; AU.musicBus.connect(ms); ms.connect(AU.verbIn);
+    /* a low, slowly moving synth bed that swells only in the intense moments */
+    AU.atmos = ctx.createGain(); AU.atmos.gain.value = 0; const alp = ctx.createBiquadFilter(); alp.type = 'lowpass'; alp.frequency.value = 380; alp.Q.value = 4;
+    const alfo = ctx.createOscillator(); alfo.frequency.value = 0.07; const alg = ctx.createGain(); alg.gain.value = 220; alfo.connect(alg); alg.connect(alp.frequency); alfo.start();
+    [[61.7, 'sawtooth', 1], [62.3, 'sawtooth', 1], [87.3, 'sawtooth', 0.6], [30.9, 'sine', 1.4], [174.6, 'triangle', 0.15]].forEach(([f, ty, gv]) => { const o = ctx.createOscillator(); o.type = ty; o.frequency.value = f; const og = ctx.createGain(); og.gain.value = gv; o.connect(og); og.connect(alp); o.start(); });
+    alp.connect(AU.atmos); AU.atmos.connect(master); const as = ctx.createGain(); as.gain.value = 0.5; AU.atmos.connect(as); as.connect(AU.verbIn);
     renderRecord(sr);
     AU.on = true;
   } catch (e) { AU.on = false; }
@@ -1037,13 +1105,22 @@ function bellow() {
   const n = ctx.createBufferSource(); n.buffer = AU.white; const nl = ctx.createBiquadFilter(); nl.type = 'lowpass'; nl.frequency.value = 420; const am = ctx.createGain(); am.gain.value = 0.15; const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 23; const lg = ctx.createGain(); lg.gain.value = 0.15; lfo.connect(lg); lg.connect(am.gain);
   n.connect(nl); nl.connect(am); am.connect(f1); n.start(t); n.stop(t + 3.3); lfo.start(t); lfo.stop(t + 3.3);
 }
+/* the tent shaken: soft nylon rustle and the fabric pulling taut, no clicks */
+function fabricShake(dur) {
+  const d = AU.tentPan.input, t = now();
+  for (let k = 0; k < Math.floor(dur * 16); k++) burst({ when: t + k / 16 + rand() * 0.03, freq: 1600 + rand() * 2600, q: 0.45, gain: 0.04 + rand() * 0.05, attack: 0.025, dur: 0.1 + rand() * 0.09, dest: d });
+  [0, 0.32, 0.7].forEach(o => { if (o < dur) burst({ when: t + o, type: 'lowpass', freq: 105, q: 0.6, gain: 0.32, attack: 0.02, dur: 0.24, dest: d }); });
+}
+function zipper() { let t = now(); for (let k = 0; k < 34; k++) { burst({ when: t, freq: 2600 + k * 40, q: 2, gain: 0.07, attack: 0.002, dur: 0.018 }); t += 0.03 - k * 0.0003; } }
+function canOpen() { burst({ type: 'highpass', freq: 3200, gain: 0.14, attack: 0.001, dur: 0.5 }); tone({ f: 2900, dur: 0.012, gain: 0.05, attack: 0.001 }); }
+function phoneTick() { tone({ f: 1250, dur: 0.02, gain: 0.03, attack: 0.001 }); }
 function lampClick(on) { tone({ f: on ? 2400 : 1800, dur: 0.03, gain: 0.08, attack: 0.001 }); burst({ freq: 3000, q: 2, gain: 0.08, dur: 0.02, attack: 0.001 }); }
 function shutter() { burst({ freq: 3200, q: 1.5, gain: 0.25, dur: 0.03, attack: 0.001 }); burst({ when: now() + 0.07, freq: 2200, q: 1.5, gain: 0.2, dur: 0.04, attack: 0.001 }); burst({ when: now() + 0.12, freq: 900, q: 0.6, gain: 0.05, attack: 0.05, dur: 0.45 }); }
 /* music: guitar arpeggios and strums over a synth pad. Each mood is a mode:
    bright Lydian and Mixolydian for open daytime, Dorian and Aeolian for noon and evening,
    Phrygian when something is off, Locrian for the dark and the unknown. */
 const MODES = { ionian: [0, 2, 4, 5, 7, 9, 11], dorian: [0, 2, 3, 5, 7, 9, 10], phrygian: [0, 1, 3, 5, 7, 8, 10], lydian: [0, 2, 4, 6, 7, 9, 11], mixolydian: [0, 2, 4, 5, 7, 9, 10], aeolian: [0, 2, 3, 5, 7, 8, 10], locrian: [0, 1, 3, 5, 6, 8, 10] };
-const PATTERNS = { arpUp: [0, 1, 2, 3, 4, 5, 4, 3], arpUpDown: [0, 2, 3, 4, 5, 4, 3, 2], travis: [0, 3, 1, 4, 0, 3, 1, 5], arpWide: [0, 2, 4, 5, 3, 5, 4, 2], sparse: [0, null, 3, null, null, 4, null, null], strum: ['S', null, null, null, 's', null, 2, null], none: [null, null, null, null, null, null, null, null] };
+const PATTERNS = { arpUp: [0, 1, 2, 3, 4, 5, 4, 3], arpUpDown: [0, 2, 3, 4, 5, 4, 3, 2], travis: [0, 3, 1, 4, 0, 3, 1, 5], arpWide: [0, 2, 4, 5, 3, 5, 4, 2], bells: [5, null, null, 4, null, 3, null, null], sparse: [0, null, 3, null, null, 4, null, null], strum: ['S', null, null, null, 's', null, 2, null], none: [null, null, null, null, null, null, null, null] };
 const MOODS = {
   dawn:    { mode: 'lydian',     root: 50, prog: [0, 1, 0, 4], bpm: 66, pat: 'arpUp',     guitar: 0.8, pad: 0.7, cut: 1500, dens: 0.9 },
   morning: { mode: 'mixolydian', root: 43, prog: [0, 6, 3, 0], bpm: 84, pat: 'travis',    guitar: 1,   pad: 0.5, cut: 1800, dens: 0.9 },
@@ -1053,6 +1130,7 @@ const MOODS = {
   evening: { mode: 'aeolian',    root: 40, prog: [0, 5, 2, 6], bpm: 68, pat: 'arpUpDown', guitar: 0.9, pad: 0.6, cut: 1100, dens: 0.85 },
   forest:  { mode: 'locrian',    root: 47, prog: [0, 1, 0, 4], bpm: 48, pat: 'sparse',    guitar: 0.6, pad: 1,   cut: 600,  dens: 0.6 },
   camp:    { mode: 'dorian',     root: 50, prog: [0, 3, 0, 4], bpm: 60, pat: 'strum',     guitar: 0.7, pad: 0.35, cut: 900, dens: 0.8 },
+  heaven:  { mode: 'lydian',     root: 50, prog: [0, 1, 4, 1], bpm: 46, pat: 'bells',     guitar: 0.7, pad: 1.5, cut: 2800, dens: 0.75, oct: 12, wave: 'triangle', attack: 3 },
   dread:   { mode: 'locrian',    root: 47, prog: [0, 0, 1, 0], bpm: 40, pat: 'none',      guitar: 0,   pad: 1.1, cut: 420,  dens: 0 }
 };
 const MID = n => 440 * Math.pow(2, (n - 69) / 12);
@@ -1076,10 +1154,12 @@ function pluckAt(midi, when, gain, pan) {
 }
 function padChord(c, t, dur, m) {
   const ctx = AU.ctx, lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.7; lp.frequency.setValueAtTime(m.cut * 0.7, t); lp.frequency.linearRampToValueAtTime(m.cut, t + dur * 0.6);
-  const g = ctx.createGain(), v = 0.02 * m.pad; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 1.4); g.gain.setValueAtTime(v, t + dur - 1.2); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+  const g = ctx.createGain(), v = 0.02 * m.pad, at = m.attack || 1.4; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + at); g.gain.setValueAtTime(v, t + Math.max(at, dur - 1.2)); g.gain.linearRampToValueAtTime(0.0001, t + dur + (m.attack ? 1.5 : 0));
   lp.connect(g); g.connect(AU.musicBus);
-  const dark = m.mode === 'locrian' || m.mode === 'phrygian';
-  [c.r - 12, c.r + c.i3, c.r + c.i5, c.r + c.i7 - (dark ? 0 : 12)].forEach(n => [-7, 7].forEach(de => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = MID(n); o.detune.value = de; o.connect(lp); o.start(t); o.stop(t + dur + 0.1); }));
+  const dark = m.mode === 'locrian' || m.mode === 'phrygian', o = m.oct || 0, wave = m.wave || 'sawtooth';
+  const notes = [c.r - 12, c.r + c.i3, c.r + c.i5, c.r + c.i7 - (dark ? 0 : 12)].map(n => n + o);
+  if (wave === 'triangle') notes.push(c.r + 12 + o, c.r + c.i5 + 12 + o);
+  notes.forEach(n => [-7, 7].forEach(de => { const os = ctx.createOscillator(); os.type = wave; os.frequency.value = MID(n); os.detune.value = de; os.connect(lp); os.start(t); os.stop(t + dur + (m.attack ? 1.6 : 0.1)); }));
 }
 const music = { mood: null, next: 0, step: 0, bar: 0, chord: null };
 function musicTick() {
@@ -1092,7 +1172,7 @@ function musicTick() {
   while (music.next < now() + 0.2) {
     const t = music.next;
     if (music.step % 8 === 0) { music.chord = chordOf(m, m.prog[music.bar % m.prog.length]); if (m.pad > 0) padChord(music.chord, t, sd * 8 + 1.2, m); music.bar++; }
-    const c = music.chord, v = [c.r, c.r + c.i5, c.r + 12, c.r + 12 + c.i3, c.r + 12 + c.i5, c.r + 24];
+    const c = music.chord, o = m.oct || 0, v = [c.r, c.r + c.i5, c.r + 12, c.r + 12 + c.i3, c.r + 12 + c.i5, c.r + 24].map(n => n + o);
     const e = PATTERNS[m.pat][music.step % 8];
     if (m.guitar > 0 && e != null && (music.step % 8 === 0 || rand() < m.dens)) {
       if (e === 'S' || e === 's') v.forEach((n, k) => pluckAt(n, t + k * 0.028, (e === 'S' ? 0.07 : 0.045) * m.guitar, -0.3 + k * 0.12));
@@ -1141,6 +1221,7 @@ function audioTick(dt, time) {
     tgt(AU.lake.g.gain, 0.3 * nearLake * (AU.quiet ? 0.2 : 1), 1);
     tgt(AU.creek.g.gain, 0.09 * nearCreek * (0.75 + 0.25 * Math.sin(time * 1.7)), 0.3); tgt(AU.creek2.g.gain, 0.22 * nearCreek, 0.5);
     tgt(AU.fireBed.g.gain, (P.fire || 0) * 0.12, 0.6);
+    tgt(AU.atmos.gain, (P.atmos || 0) * 0.2, 1.2);
     setListener();
   }
   const chance = r => rand() < r * dt;
@@ -1277,7 +1358,7 @@ function queueCaptures() {
     { name: 'IMG_0419', date: '14 AUG  16:37', pos: v3(rk.x + vr.x * 2.6, rk.y + 1.5, rk.z + vr.z * 2.6), look: v3(rk.x, rk.y + 0.4, rk.z), hour: 16.6, past: true },
     { name: 'IMG_0431', date: '14 AUG  23:58', pos: v3(r3.x, r3.y + 1.6, r3.z), look: v3(r3.x + r3.tx * 12 - r3.sx * 2, r3.y + 1.1, r3.z + r3.tz * 12 - r3.sz * 2), hour: 23.9, past: true, flash: true },
     { name: 'IMG_0432', date: '14 AUG  23:58', pos: v3(r4.x + r4.sx * 4, r4.y + 1.5, r4.z + r4.sz * 4), look: v3(r4.x + r4.sx * 13 - r4.tx * 2, r4.y + 0.6, r4.z + r4.sz * 13 - r4.tz * 2), hour: 23.9, past: true, flash: true },
-    { name: 'IMG_0433', date: '22 AUG  21:12', pos: photo5Pos(), look: v3(W.sitPos.x, W.sitPos.y + 0.8, W.sitPos.z), hour: 21.2, night: true }
+    { name: 'IMG_0433', date: '24 AUG  21:12', pos: photo5Pos(), look: v3(W.sitPos.x, W.sitPos.y + 0.8, W.sitPos.z), hour: 21.2, night: true }
   ];
   SD.length = 0; capQ.forEach(c => SD.push(c));
 }
@@ -1310,17 +1391,19 @@ const MOTH = [
 ];
 const pickOf = st => MOTH[st.choice == null ? 2 : st.choice];
 
+const DAYS = { 1: { light: 0.05, vis: 0, label: 'New moon', cls: 'new' }, 3: { light: 0.1, vis: 0, label: 'Waxing crescent', cls: 'crescent' } };
 const SCENES = [
-  /* 0 */ { dur: 10, hours: [5.55, 6.05], energy: 5, audio: { wind: 0.25 },
-    enter() { $('#titlecard').style.opacity = 1; if (AU.on) { bell(now() + 1.2); bell(now() + 4); bell(now() + 6.8); } },
+  /* ===== Day 1 ===== */
+  /* 0 */ { dur: 10, hours: [5.55, 6.05], day: 1, energy: 5, audio: { wind: 0.25 },
+    enter() { $('#titlecard h1').textContent = 'The Other Waymarks'; $('#titlecard p').textContent = 'Day 1 · late August'; $('#titlecard').style.opacity = 1; if (AU.on) { bell(now() + 1.2); bell(now() + 4); bell(now() + 6.8); } },
     events: [{ at: 7.2, fn() { $('#titlecard').style.opacity = 0; } }],
     update(t, s, dt) { const r = hikerAt(0.003, dt); look(W.hiker, null, dt); return { pos: around(r, -40 + s * 12, 22, 28 - s * 5), look: around(r, 70, 0, 6) }; } },
 
-  /* 1 */ { dur: 14, hours: [6.2, 6.8], energy: 5, audio: { wind: 0.18, music: 0.8, mood: 'dawn' },
+  /* 1 */ { dur: 14, hours: [6.2, 6.8], day: 1, energy: 5, audio: { wind: 0.18, music: 0.8, mood: 'dawn' },
     captions: [[1.2, d => '06:14. Left ' + d.town + ' before the bakery opened.'], [8, () => 'The trail is marked red and white. Easy to follow, for now.']],
     update(t, s, dt) { const r = hikerAt((3 + t * 1.35) / W.L, dt); look(W.hiker, null, dt); return { pos: around(r, -6.5, 2.2, 2.6), look: around(r, 5, 0, 1.3) }; } },
 
-  /* 2 */ { dur: 16, hours: [8.3, 8.8], energy: 5, audio: { wind: 0.2, music: 0.7, mood: 'morning' },
+  /* 2 */ { dur: 16, hours: [8.3, 8.8], day: 1, energy: 5, audio: { wind: 0.2, music: 0.7, mood: 'morning' },
     captions: [[2, () => '08:40. Stepping stones over the creek.'], [8.5, () => 'A deer drinking downstream. It watched me the whole way across.']],
     toasts: [[10.5, 'New in your journal', d => '<b>Red deer</b>, drinking at the creek below ' + d.town + '. 08:44.']],
     enter(st) {
@@ -1338,7 +1421,7 @@ const SCENES = [
       return { pos: around(r, 4.5, -7.5, 2.4), look: v3(lerp(r.x, dx, 0.35), r.y + 1.2, lerp(r.z, dz, 0.35)) };
     } },
 
-  /* 3 */ { dur: 13, hours: [10.6, 10.8], energy: 4, audio: { wind: 0.45, music: 0.6, mood: 'morning' },
+  /* 3 */ { dur: 13, hours: [10.6, 10.8], day: 1, energy: 4, audio: { wind: 0.45, music: 0.6, mood: 'morning' },
     captions: [[5.6, () => '10:40. A mark on this rock. Faded blue.'], [9.4, () => 'It isn’t on my map. Neither was the last one.']],
     toasts: [[10.6, 'Noted', () => '<b>Faded blue waymark</b>, leading off the trail, uphill.']],
     events: [{ at: 4.8, fn() { AU.prof.mood = 'mark'; } }],
@@ -1349,7 +1432,7 @@ const SCENES = [
       return { pos: around(W.stop, 8 - s * 2, -W.rs * 3.2, 2.3), look: headOf(W.hiker).lerp(v3(rk.x, rk.y + 0.5, rk.z), smooth(5, 9, t)) };
     } },
 
-  /* 4 */ { dur: 31, hours: [12.55, 12.75], energy: 4, audio: { wind: 0.4, music: 0.4, mood: 'noon', breath: true },
+  /* 4 */ { dur: 31, hours: [12.55, 12.75], day: 1, energy: 4, audio: { wind: 0.4, music: 0.4, mood: 'noon', breath: true },
     events: [
       { at: 5.6, fn() { dialog.show('Moth', 'Hello. You’re heading up? Late start.'); } },
       { at: 8.6, fn(st) { dialog.choices(MOTH.map(a => a.q), 7, 2, i => { st.choice = i; if (playing && sceneIdx === 4 && sceneT < 15.6) sceneT = 15.6; }); } },
@@ -1373,7 +1456,7 @@ const SCENES = [
       return { pos: v3(mid.x + M.sx * st.sgn * 6.5 + M.tx * 0.5, mid.y + 1.9, mid.z + M.sz * st.sgn * 6.5 + M.tz * 0.5), look: v3(mid.x, mid.y + 1.25, mid.z) };
     } },
 
-  /* 5 */ { dur: 15, hours: [14.2, 14.4], energy: 3, audio: { wind: 0.5, music: 0.9, mood: 'view' },
+  /* 5 */ { dur: 15, hours: [14.2, 14.4], day: 1, energy: 3, audio: { wind: 0.5, music: 0.9, mood: 'view' },
     captions: [[2.2, d => '14:20. That’s ' + d.lake + ' down there. That’s where I’ll sleep.']],
     events: [{ at: 8.6, fn() { photoReq = true; if (AU.on) shutter(); } }],
     enter(st) { const r = W.rp(W.shoulderU); st.view = v3(W.LAKE.x - r.x, 0, W.LAKE.z - r.z).normalize(); st.yaw0 = Math.atan2(r.tx, r.tz); st.yaw1 = Math.atan2(st.view.x, st.view.z); const V = st.view; st.lat = W.heightAt(r.x + V.z * 5, r.z - V.x * 5) < W.heightAt(r.x - V.z * 5, r.z + V.x * 5) ? 1 : -1; },
@@ -1386,20 +1469,8 @@ const SCENES = [
       return { pos: v3(r.x - V.x * lerp(2.6, 6, k) + V.z * lat, r.y + lerp(1.9, 4.2, k), r.z - V.z * lerp(2.6, 6, k) - V.x * lat), look: v3(r.x + V.x * 40, r.y + lerp(1.4, -4, k), r.z + V.z * 40) };
     } },
 
-  /* 6: an altered waymark */
-  { dur: 13, hours: [17.2, 17.42], energy: 3, audio: { wind: 0.3, music: 0.6, mood: 'noon' },
-    captions: [[5.4, () => '17:20. Someone has painted over the red.'], [9.2, () => 'The paint is still wet.']],
-    toasts: [[10.6, 'Noted', () => '<b>Red-and-white waymark</b>, painted over in blue. The paint was still wet.']],
-    events: [{ at: 4.6, fn() { AU.prof.mood = 'mark'; } }],
-    update(t, s, dt) {
-      const pp = W.paintPost, rem = t < 3 ? 1.375 + 1.1 * (3 - t) : t < 5.5 ? 1.375 * Math.pow(1 - (t - 3) / 2.5, 2) : 0;
-      const r = hikerAt(pp.u - (1.5 + rem) / W.L, dt), band = v3(pp.x, pp.y + 0.92, pp.z);
-      look(W.hiker, t > 3.4 ? band : null, dt);
-      return { pos: around(W.rp(pp.u), 2.4, -Math.sign(pp.sd) * 2.2, 1.5), look: headOf(W.hiker).lerp(band, smooth(5, 8.5, t) * 0.85) };
-    } },
-
-  /* 7: the SD card */
-  { dur: 15, hours: [19.0, 19.3], energy: 2, audio: { wind: 0.2, music: 0.75, mood: 'evening' },
+  /* 6: the SD card */
+  { dur: 15, hours: [19.0, 19.3], day: 1, energy: 2, audio: { wind: 0.2, music: 0.75, mood: 'evening' },
     captions: [[2, () => '19:05. Something glinting in the dirt.'], [9.8, () => 'An SD card. Someone’s holiday, maybe. I’ll ask in the next village.']],
     toasts: [[11.4, 'Found', () => '<b>SD card</b>, 32 GB, scratched. No name on it.']],
     update(t, s, dt) {
@@ -1413,11 +1484,11 @@ const SCENES = [
       return { pos: around(W.rp(W.sdU), 3.2, -2.4, 1.5), look: headOf(H).lerp(g, smooth(3, 7, t) * 0.5 * (1 - smooth(10, 12, t))) };
     } },
 
-  /* 8: into the forest, the headlamp, the fox */
-  { dur: 19, hours: [20.02, 20.3], energy: 2, audio: { wind: 0.12, music: 0.6, mood: 'forest' },
+  /* 7: into the forest, no moon: the headlamp, the fox */
+  { dur: 19, hours: [20.02, 20.3], day: 1, energy: 2, audio: { wind: 0.12, music: 0.6, mood: 'forest' },
     captions: [[3.2, () => '20:05. Dark under the trees already.'], [9.6, () => 'Two eyes in the beam.'], [13.4, () => 'Just a fox.']],
     toasts: [[14.2, 'New in your journal', d => '<b>Red fox</b>, in the woods above ' + d.lake + '. Eyes like lamps.']],
-    events: [{ at: 4.5, fn() { if (AU.on) owl(); } }],
+    events: [{ at: 4.5, fn() { if (AU.on) owl(); } }, { at: 9.2, fn() { AU.prof.atmos = 0.35; } }, { at: 13.4, fn() { AU.prof.atmos = 0; } }],
     enter(st) { st.u0 = 0.784; const fr = W.rp(st.u0 + 14.2 / W.L); st.foxP = v3(fr.x + fr.sx * 2.2, 0, fr.z + fr.sz * 2.2); },
     update(t, s, dt, st) {
       const m = t < 7 ? t * 1.1 : t < 13.5 ? 7.7 : 7.7 + (t - 13.5) * 1.1;
@@ -1435,20 +1506,74 @@ const SCENES = [
       return { pos: around(r, -4.2, 1.1, 2.0), look: around(r, 6, 0.3, 1.0) };
     } },
 
-  /* 9: out of the trees */
-  { dur: 11, hours: [20.85, 21.0], energy: 2, audio: { wind: 0.12, music: 0.3, mood: 'forest' },
-    captions: [[5.2, () => '20:55. Out of the trees. Full moon. I hardly need the headlamp.']],
+  /* 8: out of the trees */
+  { dur: 11, hours: [20.85, 21.0], day: 1, energy: 2, audio: { wind: 0.12, music: 0.3, mood: 'forest' },
+    captions: [[5.2, () => '20:55. Out of the trees. No moon tonight. The headlamp stays on.']],
     update(t, s, dt) { const r = hikerAt(0.952 + t * 1.15 / W.L, dt); look(W.hiker, t > 4 ? v3(W.LAKE.x, W.waterY + 2, W.LAKE.z) : null, dt, 0.6); return { pos: around(r, 6.5 - s * 1.5, 2.2, 1.9), look: around(r, 0, 0, 1.3) }; } },
 
-  /* 10: camp, and what is on the card */
-  { dur: 30, hours: [21.1, 21.45], energy: 2, audio: { wind: 0.08, fire: 0.6, music: 0.55, mood: 'camp' },
-    captions: [[2, () => '21:15. Tent up, fire lit. The lake is very still.'], [7.2, () => 'Looked through the SD card. Maybe there’s a name on it.'], [19.6, () => 'That’s my tent.'], [22.8, () => 'That’s me.']],
-    toasts: [[3.6, 'New in your journal', () => '<b>Full moon</b>, first night out. Frogs at the lake, an owl in the woods.']],
+  /* 9: a beer by the fire, an early night */
+  { dur: 17, hours: [21.1, 21.5], day: 1, energy: 2, audio: { wind: 0.08, fire: 0.6, music: 0.55, mood: 'camp' },
+    captions: [[1.6, () => '21:15. Tent up, fire lit.'], [5.4, () => 'The beer I carried all day was worth it.'], [10, () => 'Thinking about Moth. And the blue marks.'], [14, () => 'Early night.']],
+    events: [{ at: 2.6, fn() { if (AU.on) canOpen(); } }],
+    update(t, s, dt) {
+      const sp = W.sitPos, f = W.firePos, H = W.hiker;
+      poseSit(H, sp.x, sp.z, Math.atan2(W.F.x, W.F.z), 0.5);
+      H.beer.visible = t > 2.2;
+      const sip = t > 3.5 ? Math.pow(Math.max(0, Math.sin((t - 3.5) * 0.8)), 6) : 0;
+      if (t > 2.2) { H.arms[1].sh.rotation.x = lerp(-0.75, -2.25, sip); H.arms[1].el.rotation.x = lerp(-1.0, -1.7, sip); }
+      look(H, sip > 0.3 ? null : v3(f.x, f.y + 0.4, f.z), dt, 0.6); H.head.rotation.x -= sip * 0.45;
+      const a = Math.atan2(-W.F.z, -W.F.x) + 0.9 + s * 0.6, R = lerp(7.5, 5, s);
+      return { pos: v3(f.x + Math.cos(a) * R, f.y + 2.2, f.z + Math.sin(a) * R), look: v3(lerp(f.x, sp.x, 0.5), f.y + 0.8, lerp(f.z, sp.z, 0.5)) };
+    } },
+
+  /* 10: 02:10, the stars, an aurora that should not be here */
+  { dur: 31, hours: [2.15, 2.4], day: 1, energy: 3, audio: { wind: 0.05 },
+    captions: [[2, () => '02:10. Too much beer. Had to get up.'], [9.5, () => 'Lamp off. No moon. I have never seen this many stars.'], [18, () => 'Is that… an aurora?'], [23.4, () => 'It shouldn’t be possible this far south. The lake is green with it.']],
+    toasts: [[26.5, 'New in your journal', () => '<b>Aurora</b>, 02:14, over the ridge. Impossible here. Watched until my feet went numb.']],
+    events: [
+      { at: 0.05, fn() { lampForce = true; } },
+      { at: 0.6, fn() { if (AU.on) zipper(); } },
+      { at: 8.2, fn() { lampForce = false; } },
+      { at: 13.5, fn() { AU.prof.music = 0.9; AU.prof.mood = 'heaven'; } }
+    ],
+    enter(st) { const tp = W.tentPos; st.A = v3(tp.x - W.Fp.x * 1.7, 0, tp.z - W.Fp.z * 1.7); const Ld = W.lakeDir; st.B = v3(W.end.x + Ld.x * 7, 0, W.end.z + Ld.z * 7); W.aurora.visible = true; },
+    update(t, s, dt, st) {
+      const k = smooth(1.5, 7, t), x = lerp(st.A.x, st.B.x, k), z = lerp(st.A.z, st.B.z, k);
+      const walkYaw = Math.atan2(st.B.x - st.A.x, st.B.z - st.A.z), skyYaw = Math.atan2(W.lakeDir.x, W.lakeDir.z);
+      poseWalk(W.hiker, x, z, walkYaw + wrapA(skyYaw - walkYaw) * smooth(6.5, 8.5, t), dt, { steps: true, surface: 'soft' });
+      const H = W.hiker, hp = H.g.position;
+      look(H, t > 8.5 ? v3(hp.x + W.lakeDir.x * 30, hp.y + 22, hp.z + W.lakeDir.z * 30) : null, dt);
+      W.auroraLevel = smooth(13.5, 21, t) * (0.85 + 0.15 * Math.sin(t * 0.4));
+      const up = smooth(8, 14, t), F = W.lakeDir, Fp = v3(-W.lakeDir.z, 0, W.lakeDir.x);
+      if (t < 8) { const dx = st.B.x - st.A.x, dz = st.B.z - st.A.z, l = Math.hypot(dx, dz) || 1; return { pos: v3(hp.x - dx / l * 4 + Fp.x * 1.5, hp.y + 1.8, hp.z - dz / l * 4 + Fp.z * 1.5), look: v3(hp.x, hp.y + 1.2, hp.z) }; }
+      return { pos: v3(hp.x - F.x * 3.4 + Fp.x * 1.1, hp.y + lerp(1.7, 1.1, up), hp.z - F.z * 3.4 + Fp.z * 1.1), look: v3(hp.x + F.x * 30, hp.y + lerp(2, 11, up), hp.z + F.z * 30) };
+    } },
+
+  /* 11: two days later */
+  { dur: 4.5, hours: [16.9, 16.95], day: 3, energy: 3, audio: { wind: 0.15 }, card: { title: 'Day 3', sub: 'The pass was closed. Back down to the lake.' },
+    update() { return null; } },
+
+  /* ===== Day 3 ===== */
+  /* 12: an altered waymark */
+  { dur: 13, hours: [17.2, 17.42], day: 3, energy: 3, audio: { wind: 0.3, music: 0.6, mood: 'noon' },
+    captions: [[5.4, () => '17:20. Someone has painted over the red.'], [9.2, () => 'The paint is still wet.']],
+    toasts: [[10.6, 'Noted', () => '<b>Red-and-white waymark</b>, painted over in blue. The paint was still wet.']],
+    events: [{ at: 4.6, fn() { AU.prof.mood = 'mark'; AU.prof.atmos = 0.3; } }],
+    update(t, s, dt) {
+      const pp = W.paintPost, rem = t < 3 ? 1.375 + 1.1 * (3 - t) : t < 5.5 ? 1.375 * Math.pow(1 - (t - 3) / 2.5, 2) : 0;
+      const r = hikerAt(pp.u - (1.5 + rem) / W.L, dt), band = v3(pp.x, pp.y + 0.92, pp.z);
+      look(W.hiker, t > 3.4 ? band : null, dt);
+      return { pos: around(W.rp(pp.u), 2.4, -Math.sign(pp.sd) * 2.2, 1.5), look: headOf(W.hiker).lerp(band, smooth(5, 8.5, t) * 0.85) };
+    } },
+
+  /* 13: back at the lake, and what is on the card */
+  { dur: 30, hours: [21.1, 21.45], day: 3, energy: 2, audio: { wind: 0.08, fire: 0.6, music: 0.55, mood: 'camp' },
+    captions: [[2, () => '21:15. Back at the lake. Nobody I met knew whose card this is.'], [7.2, () => 'Looked through it properly this time.'], [19.6, () => 'That’s my tent.'], [22.8, () => 'That’s me.']],
     events: [
       { at: 0.05, fn() { queueCaptures(); } },
-      { at: 8.6, fn() { caption(''); sdShow(0); } }, { at: 11.1, fn() { sdShow(1); } }, { at: 13.5, fn() { sdShow(2); } }, { at: 15.6, fn() { sdShow(3); } },
-      { at: 17.8, fn() { sdShow(4); AU.prof.mood = 'dread'; AU.prof.music = 0.7; } },
-      { at: 25.6, fn() { sdHide(); } }
+      { at: 8.6, fn() { caption(''); sdShow(0); } }, { at: 11.1, fn() { sdShow(1); } }, { at: 13.5, fn() { sdShow(2); AU.prof.atmos = 0.2; } }, { at: 15.6, fn() { sdShow(3); } },
+      { at: 17.8, fn() { sdShow(4); AU.prof.mood = 'dread'; AU.prof.music = 0.7; AU.prof.atmos = 0.65; } },
+      { at: 25.6, fn() { sdHide(); AU.prof.atmos = 0.3; } }
     ],
     exit() { sdHide(); },
     update(t, s, dt) {
@@ -1461,16 +1586,16 @@ const SCENES = [
       return { pos: v3(f.x + Math.cos(a) * R, f.y + lerp(2.4, 2.0, close), f.z + Math.sin(a) * R), look: v3(lerp(f.x, sp.x, close), f.y + lerp(0.7, 1.0, close), lerp(f.z, sp.z, close)) };
     } },
 
-  /* 11: the record in the trees */
-  { dur: 21, hours: [21.75, 21.85], energy: 2, audio: { wind: 0.05, fire: 0.45 }, hardCut: true,
+  /* 14: the record in the trees */
+  { dur: 21, hours: [21.75, 21.85], day: 3, energy: 2, audio: { wind: 0.05, fire: 0.45 }, hardCut: true,
     captions: [[5.4, () => '21:47. The crickets stopped all at once.'], [10.6, () => 'Music. Somewhere in the trees.'], [15.2, () => 'The record is skipping.']],
     events: [
       { at: 3.6, fn() { AU.quiet = true; AU.prof.fire = 0.25; } },
-      { at: 4.6, fn() { AU.prof.mood = 'dread'; AU.prof.music = 0.45; } },
-      { at: 6.8, fn() { AU.prof.music = 0; } },
+      { at: 4.6, fn() { AU.prof.atmos = 0.35; } },
       { at: 7.2, fn() { if (AU.on) recordStart(); } },
-      { at: 12.6, fn() { if (AU.on) recordSkip(); } },
-      { at: 19.2, fn() { if (AU.on) recordStop(); caption(''); } }
+      { at: 12.6, fn() { if (AU.on) recordSkip(); AU.prof.atmos = 0.75; } },
+      { at: 15, fn() { AU.prof.atmos = 1; } },
+      { at: 19.2, fn() { if (AU.on) recordStop(); caption(''); AU.prof.atmos = 0.15; } }
     ],
     update(t, s, dt) {
       const sp = W.sitPos, f = W.firePos;
@@ -1483,36 +1608,54 @@ const SCENES = [
       return { pos: cp, look: lk.lerp(W.ridgePos, smooth(14, 17, t) * (1 - smooth(19, 21, t)) * 0.12) };
     } },
 
-  /* 12: inside the tent */
-  { dur: 26, hours: [23.2, 23.3], energy: 2, audio: { wind: 0.04, music: 0.35, mood: 'dread', breathSoft: true }, hardCut: true, noLamp: true,
-    captions: [[1.5, () => '23:12. In the sleeping bag. Wide awake.'], [7.8, () => 'Something called, far off. Too deep for a deer.'], [12.4, () => 'Footsteps.']],
+  /* 15: woken in the tent, pitch black */
+  { dur: 35, hours: [1.86, 1.93], day: 3, energy: 3, audio: { wind: 0.03, breathSoft: true }, hardCut: true, noLamp: true, inside: true,
+    captions: [[1.6, () => '01:52. Something woke me.'], [6.4, () => 'Something called, far off. Too deep for a deer.'], [10.8, () => 'Footsteps.'], [31, () => 'That rock was bare when I pitched the tent.']],
     events: [
       { at: 0, fn() { AU.quiet = true; AU.recTarget = W.ridgePos; } },
-      { at: 4.6, fn() { if (AU.on) bellow(); } },
-      { at: 9.5, fn() { AU.prof.music = 0; } },
-      { at: 11.6, fn() { AU.holdBreath = true; } },
-      { at: 17, fn(st) { st.shake = 1; if (AU.on) tug(); } },
-      { at: 18.3, fn(st) { st.shake = 0.8; if (AU.on) tug(); } },
-      { at: 22.8, fn(st) { st.shake = 0.45; if (AU.on) tap(); } },
-      { at: 23.2, fn() { if (AU.on) gasp(); } }
+      { at: 1.0, fn() { if (AU.on) phoneTick(); } },
+      { at: 3.2, fn() { if (AU.on) bellow(); AU.prof.atmos = 0.45; } },
+      { at: 9, fn() { AU.prof.atmos = 0.7; } },
+      { at: 10.2, fn() { AU.holdBreath = true; } },
+      { at: 16, fn(st) { st.shake = 1; if (AU.on) fabricShake(1.1); AU.prof.atmos = 1; } },
+      { at: 17.4, fn(st) { st.shake = 0.8; if (AU.on) fabricShake(0.8); } },
+      { at: 19.6, fn() { AU.prof.atmos = 0.25; } },
+      { at: 20.4, fn(st) { st.shake = 0.35; if (AU.on) tap(); } },
+      { at: 20.8, fn() { if (AU.on) gasp(); AU.holdBreath = false; } },
+      { at: 22.6, fn(st) { st.lamp = true; if (AU.on) lampClick(true); AU.prof.atmos = 0.5; $('#lamp').textContent = '· Headlamp on'; $('#lamp').classList.add('on'); } },
+      { at: 25.6, fn() { if (AU.on) zipper(); } },
+      { at: 29.6, fn() { AU.prof.atmos = 1; } }
     ],
-    enter(st) { W.inside.g.visible = true; W.hiker.g.visible = false; st.shake = 0; st.nextStep = 10.6; setLamp(false, true); W.hiker.lamp.level = 0; },
+    enter(st) {
+      const I = W.inside; I.g.visible = true; W.tent.g.visible = false; W.hiker.g.visible = false; W.tentMark.visible = true;
+      st.shake = 0; st.nextStep = 9.2; st.lamp = false; setLamp(false, true); W.hiker.lamp.level = 0;
+      I.g.updateMatrixWorld(true); st.rockL = I.g.worldToLocal(v3(W.tentRock.x, W.tentRock.y + 0.45, W.tentRock.z));
+    },
     update(t, s, dt, st) {
       const I = W.inside; I.g.updateMatrixWorld(true);
-      const a = t < 10.5 ? 0 : t < 14.6 ? (t - 10.5) / 4.1 * 1.3 : t < 15.6 ? 1.3 : t < 19.6 ? 1.3 + (t - 15.6) / 4 * 1.25 : 2.55;
-      const R = lerp(2.2, 1.35, smooth(15.6, 19.6, t)), lx = Math.sin(a) * R, lz = Math.cos(a) * R;
+      /* something walks around the tent */
+      const a = t < 9.2 ? 0 : t < 13.2 ? (t - 9.2) / 4 * 1.3 : t < 14.2 ? 1.3 : t < 18.4 ? 1.3 + (t - 14.2) / 4.2 * 1.25 : 2.55;
+      const R = lerp(2.2, 1.35, smooth(14.2, 18.4, t)), lx = Math.sin(a) * R, lz = Math.cos(a) * R;
       AU.walkPos = I.g.localToWorld(v3(lx, 0.3, lz));
-      const moving = (t > 10.5 && t < 14.6) || (t > 15.6 && t < 19.6);
+      const moving = (t > 9.2 && t < 13.2) || (t > 14.2 && t < 18.4);
       if (dt > 0 && moving && t >= st.nextStep) { st.nextStep = t + 0.8 + rand() * 0.25; if (AU.on && !paused) heavyStep(); }
-      I.sMat.opacity = smooth(0.9, 1.7, lx) * 0.6 * (t > 10.5 ? 1 : 0); I.shadow.position.z = clamp(lz * 0.6, -1, 1);
       st.shake = Math.max(0, (st.shake || 0) - dt * 1.6);
       I.inner.rotation.z = Math.sin(t * 43) * 0.02 * st.shake; I.inner.rotation.x = Math.sin(t * 31) * 0.01 * st.shake;
-      I.swingV += (-I.swing * 30 - I.swingV * 1.2) * dt + st.shake * Math.sin(t * 20) * dt * 6; I.swing += I.swingV * dt;
-      I.lampPivot.rotation.z = I.swing; I.lampPivot.rotation.x = I.swing * 0.5;
-      const toward = smooth(10.5, 12.5, t) * 0.85, ang = clamp(Math.atan2(lx + 0.15, lz + 0.85), -1.35, 1.35) * toward;
-      const cp = v3(-0.15, 0.36 + Math.sin(t * 1.7) * 0.006 * (AU.holdBreath ? 0.2 : 1), -0.85);
-      const tl = v3(cp.x + Math.sin(ang) * 2, 0.6 + toward * 0.1, cp.z + Math.cos(ang) * 2);
-      return { pos: I.g.localToWorld(cp), look: I.g.localToWorld(tl), noClamp: true, fov: 74 };
+      /* the phone is the only light, then the headlamp */
+      const ph = smooth(0.9, 1.2, t) * (1 - smooth(5.5, 6.5, t));
+      I.phoneMat.color.setRGB(0.45 * ph, 0.55 * ph, 0.8 * ph); I.phoneLight.intensity = ph * 0.5;
+      I.lampItem.visible = !st.lamp;
+      const lampOn = st.lamp ? 1 : 0; W.handLamp.intensity = lerp(W.handLamp.intensity, lampOn * 1.7, dt > 0 ? 1 - Math.exp(-dt * 20) : 1); W.handFill.intensity = W.handLamp.intensity * 0.22;
+      /* the door */
+      I.doorPivot.quaternion.setFromAxisAngle(I.doorAxis, -smooth(26, 27.6, t) * 1.7);
+      /* where the head is, and where it looks */
+      const p = v3(-0.15, 0.36, -0.85).lerp(v3(-0.1, 0.62, -0.7), smooth(22.8, 23.8, t)).lerp(v3(0, 0.5, 0.75), smooth(24.2, 25.8, t)).lerp(v3(0, 0.55, 1.45), smooth(27.4, 28.6, t));
+      p.y += Math.sin(t * 1.7) * 0.006 * (AU.holdBreath ? 0.2 : 1);
+      const toward = smooth(9.2, 11.2, t) * 0.85, ang = clamp(Math.atan2(lx + 0.15, lz + 0.85), -1.35, 1.35) * toward;
+      const T0 = v3(-0.15 + Math.sin(ang) * 2, 0.6 + toward * 0.1, -0.85 + Math.cos(ang) * 2);
+      const sw = lerp(-0.9, 0.55, smooth(28.6, 30.6, t)), T3 = v3(Math.sin(sw) * 5, 0.25, 1.45 + Math.cos(sw) * 5).lerp(st.rockL, smooth(30.2, 31.4, t));
+      const tl = T0.lerp(v3(-0.6, 0, -0.15), smooth(22.8, 23.6, t)).lerp(v3(0, 0.45, 2.5), smooth(24, 24.8, t)).lerp(T3, smooth(28.4, 29, t));
+      return { pos: I.g.localToWorld(p), look: I.g.localToWorld(tl), noClamp: true, fov: 74 };
     } }
 ];
 
@@ -1524,7 +1667,9 @@ function resetActors() {
   hide(W.moth); hide(W.fox); W.deer.g.position.y = -500; W.hiker.prev = null; W.hiker.lookYaw = W.hiker.lookPitch = 0;
   W.fox.eyes.forEach(e => { e.material.opacity = 0; });
   W.ridgeLight.material.opacity = 0; W.fireOn = 0; W.tent.body.rotation.set(0, 0, 0); W.tent.body.scale.set(1, 1, 1);
-  W.hiker.g.visible = true; W.hiker.camProp.visible = false; W.inside.g.visible = false; sdHide();
+  W.hiker.g.visible = true; W.hiker.camProp.visible = false; W.hiker.beer.visible = false; W.inside.g.visible = false; sdHide();
+  W.auroraLevel = 0; W.aurora.visible = false; W.tentMark.visible = false; W.handLamp.intensity = 0; W.handFill.intensity = 0; lampForce = null;
+  W.inside.doorPivot.quaternion.identity(); W.inside.inner.rotation.set(0, 0, 0); W.inside.phoneLight.intensity = 0; W.inside.lampItem.visible = true;
   dialog.hide(); $('#titlecard').style.opacity = 0;
 }
 function startScene(i) {
@@ -1532,8 +1677,11 @@ function startScene(i) {
   sceneIdx = i; sceneT = 0; shown = new Set(); snap = true;
   for (const k in st) delete st[k];
   const sc = SCENES[i];
-  resetActors(); W.fireOn = i >= 10 ? 1 : 0; W.tent.g.visible = i >= 10; W.glint.visible = i <= 7;
-  AU.prof = Object.assign({ wind: 0, music: 0, mood: null, fire: 0, breath: false }, sc.audio);
+  resetActors(); W.fireOn = [9, 13, 14].includes(i) ? 1 : [10, 15].includes(i) ? 0.12 : 0; W.tent.g.visible = [9, 10, 13, 14].includes(i); W.glint.visible = i <= 6;
+  AU.prof = Object.assign({ wind: 0, music: 0, mood: null, fire: 0, breath: false, atmos: 0 }, sc.audio);
+  const D = DAYS[sc.day || 1]; MOONLIGHT = D.light; moonVis = D.vis;
+  $('#day').textContent = 'Day ' + (sc.day || 1); $('#moonTxt').textContent = D.label; $('#moon').className = D.cls;
+  if (sc.card) { $('#titlecard h1').textContent = sc.card.title; $('#titlecard p').textContent = sc.card.sub; $('#titlecard').style.opacity = 1; }
   AU.quiet = false; AU.rustle = 0; AU.timers.breath = 0.4; AU.holdBreath = false; AU.walkPos = null; AU.recTarget = null; capQ = [];
   if (AU.rec) recordStop();
   setEnergy(sc.energy); caption('');
@@ -1545,7 +1693,7 @@ function finish() {
   playing = false; sceneIdx = -1;
   $('#fade').style.opacity = 1; caption(''); $('#toast').classList.remove('show');
   $('#hud').hidden = true; $('#controls').hidden = true;
-  if (AU.on) { AU.prof = {}; AU.quiet = true; AU.rustle = 0; if (AU.rec) recordStop(); [AU.wind, AU.air, AU.lake, AU.creek, AU.creek2, AU.fireBed].forEach(n => n.g.gain.setValueAtTime(0, now())); }
+  if (AU.on) { AU.atmos.gain.setValueAtTime(0, now()); AU.musicBus.gain.setValueAtTime(0, now()); music.gain = 0; AU.prof = {}; AU.quiet = true; AU.rustle = 0; if (AU.rec) recordStop(); [AU.wind, AU.air, AU.lake, AU.creek, AU.creek2, AU.fireBed].forEach(n => n.g.gain.setValueAtTime(0, now())); }
   $('#end').hidden = false; $('#endRest').hidden = true;
   const lines = ['In the morning there were footprints all around the tent.', 'Mine, I think.'];
   const box = $('#endLines'); box.innerHTML = ''; let li = 0;
@@ -1568,9 +1716,10 @@ function begin() {
 function clearShots() {
   const segs = [], eyes = [W.sitPos.clone().setY(W.sitPos.y + 1.6)];
   SCENES.forEach((sc, i) => {
+    if (sc.card) return;
     for (const k in st) delete st[k];
     if (i > 0 && sc.enter) sc.enter(st);
-    for (let s = 0; s <= 1.0001; s += 0.025) { const g = sc.update(s * sc.dur, s, 0, st); segs.push([g.pos.x, g.pos.z, g.look.x, g.look.z]); if (i === 11 && s > 0.5 && s < 0.75) eyes.push(g.pos.clone()); }
+    for (let s = 0; s <= 1.0001; s += 0.025) { const g = sc.update(s * sc.dur, s, 0, st); segs.push([g.pos.x, g.pos.z, g.look.x, g.look.z]); if (i === 14 && s > 0.5 && s < 0.75) eyes.push(g.pos.clone()); }
   });
   const rg = W.ridgePos;
   const segDist = (x, z, q) => { const dx = q[2] - q[0], dz = q[3] - q[1], l2 = dx * dx + dz * dz || 1; const t = clamp(((x - q[0]) * dx + (z - q[1]) * dz) / l2, 0, 1); return [Math.hypot(x - (q[0] + dx * t), z - (q[1] + dz * t)), t]; };
@@ -1593,7 +1742,7 @@ function clearShots() {
 }
 
 /* ---------- main loop ---------- */
-let lastT = performance.now(), lampWait = 0;
+let lastT = performance.now(), lampWait = 0, lampForce = null;
 function frame(nowMs) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.05, (nowMs - lastT) / 1000); lastT = nowMs;
@@ -1606,16 +1755,20 @@ function frame(nowMs) {
     sceneT += dt;
     const s = clamp(sceneT / sc.dur, 0, 1), hour = lerp(sc.hours[0], sc.hours[1], s);
     light = applyTime(hour);
+    if (sc.inside) { W.hemi.intensity *= 0.1; W.dir.intensity *= 0.12; }
+    /* a fire is light too */
+    const hp0 = W.hiker.g.position; light += (W.fireOn || 0) * clamp(1 - Math.hypot(hp0.x - W.firePos.x, hp0.z - W.firePos.z) / 5, 0, 1) * 0.5;
     $('#clock').textContent = fmt(hour);
     goal = sc.update(sceneT, s, dt, st);
     const d = { town: W.town, lake: W.lakeName };
     (sc.captions || []).forEach((c, i) => { if (!shown.has('c' + i) && sceneT >= c[0]) { shown.add('c' + i); caption(c[1](d)); } });
     (sc.toasts || []).forEach((c, i) => { if (!shown.has('t' + i) && sceneT >= c[0]) { shown.add('t' + i); toast(c[1], c[2](d), 5.5); } });
     (sc.events || []).forEach((e, i) => { if (!shown.has('e' + i) && sceneT >= e.at) { shown.add('e' + i); e.fn(st); } });
-    $('#fade').style.opacity = clamp(Math.max(1 - sceneT / 0.9, sc.hardCut ? 0 : (sceneT - (sc.dur - 0.7)) / 0.7), 0, 1);
+    $('#fade').style.opacity = sc.card ? 1 : clamp(Math.max(1 - sceneT / 0.9, sc.hardCut ? 0 : (sceneT - (sc.dur - 0.7)) / 0.7), 0, 1);
     /* the headlamp follows the light: on when the trail gets too dark, off again in the open */
-    if (sc.noLamp) lampWait = 0; else lampWait = (light < 0.2 && !W.hiker.lamp.on) || (light > 0.27 && W.hiker.lamp.on) ? lampWait + dt : 0;
-    if (!sc.noLamp && lampWait > 1.6) { setLamp(!W.hiker.lamp.on); lampWait = 0; }
+    if (lampForce !== null) { if (W.hiker.lamp.on !== lampForce) setLamp(lampForce); lampWait = 0; }
+    else if (sc.noLamp) lampWait = 0; else lampWait = (light < 0.2 && !W.hiker.lamp.on) || (light > 0.27 && W.hiker.lamp.on) ? lampWait + dt : 0;
+    if (lampForce === null && !sc.noLamp && lampWait > 1.6) { setLamp(!W.hiker.lamp.on); lampWait = 0; }
     if (sceneT >= sc.dur) nextScene();
   } else if (!playing && sceneIdx === -1 && !$('#start').hidden) {
     applyTime(5.55);
@@ -1632,6 +1785,9 @@ function frame(nowMs) {
     camera.lookAt(camLook);
     W.sky.position.copy(camera.position); W.stars.position.copy(camera.position);
   }
+  W.milky.position.copy(camera.position);
+  if (W.aurora.visible) { W.aurora.position.copy(camera.position); W.aMats.forEach(m => { m.uniforms.time.value = clock; m.uniforms.level.value = W.auroraLevel; }); }
+  if (W.handLamp.intensity > 0.001) { const d = camera.getWorldDirection(new THREE.Vector3()); W.handLamp.position.copy(camera.position).addScaledVector(d, 0.05); W.handLamp.position.y -= 0.06; W.handLamp.target.position.copy(camera.position).addScaledVector(d, 6); W.handFill.position.copy(W.handLamp.position); }
   lampTick(dt);
   const fo = W.fireOn || 0, fl = 0.8 + Math.sin(clock * 13) * 0.08 + Math.sin(clock * 7.3) * 0.1 + rand() * 0.06;
   W.flame.visible = W.flame2.visible = W.fireGlow.visible = W.embers.visible = fo > 0.01;
@@ -1642,7 +1798,7 @@ function frame(nowMs) {
     W.emberG.attributes.position.needsUpdate = true;
   }
   W.water.position.y = W.waterY + Math.sin(clock * 0.8) * 0.03;
-  post.uniforms.vig.value = sceneIdx === 12 ? 1.6 : canopyCam > 0.4 ? 1.3 : sceneIdx >= 10 ? 1.15 : 0.9;
+  post.uniforms.vig.value = sceneIdx === 15 ? 1.6 : canopyCam > 0.4 ? 1.3 : sceneIdx >= 9 ? 1.15 : 0.9;
   audioTick(dt, clock);
   renderer.setRenderTarget(rt); renderer.render(scene, camera);
   renderer.setRenderTarget(null); renderer.render(postScene, postCam);
