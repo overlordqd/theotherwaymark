@@ -1,0 +1,20 @@
+{
+  "name": "the-other-waymarks",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A quiet hiking game with a mystery, in the browser.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "0.128.0"
+  },
+  "devDependencies": {
+    "@types/three": "0.128.0",
+    "typescript": "5.8.3",
+    "vite": "6.4.5"
+  }
+}
