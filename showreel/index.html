@@ -70,6 +70,8 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 #dialog .choices button:hover, #dialog .choices button.pick { background: var(--paper-ink); color: var(--paper); }
 #dialog .choices button:focus-visible { outline: 2px solid var(--paper-ink); }
 #dialog .choices kbd { font: 600 0.7rem/1 var(--f-ui); opacity: 0.6; margin-right: 0.5rem; }
+#dialog .hint { font: 600 0.6rem/1 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.55; justify-self: end; }
+#dialog.talking { cursor: pointer; }
 #dialog .timer { height: 2px; background: var(--paper-rule); }
 #dialog .timer i { display: block; height: 100%; background: var(--paper-ink); width: 100%; transform-origin: left; }
 
@@ -133,6 +135,7 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   <div class="line" id="dLine"></div>
   <div class="choices" id="dChoices"></div>
   <div class="timer" id="dTimer" hidden><i id="dBar"></i></div>
+  <div class="hint" id="dHint" hidden>Click or press Enter to continue</div>
 </div>
 
 <div id="controls" hidden>
@@ -1268,18 +1271,35 @@ function setEnergy(v) { document.querySelectorAll('#energy i').forEach((e, i) =>
 function fmt(h) { const hh = Math.floor(h) % 24, mm = Math.floor((h - Math.floor(h)) * 60); return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0'); }
 const dialog = {
   key: null, auto: null,
-  show(who, line) { $('#dialog').hidden = false; $('#dWho').textContent = who; $('#dChoices').innerHTML = ''; $('#dTimer').hidden = true; dialog.key = null; typeInto($('#dLine'), line, 30); caption(''); },
+  next: null,
+  show(who, line, done) { $('#dialog').hidden = false; $('#dWho').textContent = who; $('#dChoices').innerHTML = ''; $('#dTimer').hidden = true; dialog.key = null; typeInto($('#dLine'), line, 30, done); caption(''); },
   choices(list, secs, def, onPick) {
     const box = $('#dChoices'); box.innerHTML = ''; let done = false;
-    const pick = i => { if (done) return; done = true; box.children[i].classList.add('pick'); dialog.key = null; dialog.auto = null; setTimeout(() => onPick(i), 450); };
+    dialog.next = null; $('#dHint').hidden = true; $('#dialog').classList.remove('talking');
+    const pick = i => { if (done) return; done = true; box.children[i].classList.add('pick'); dialog.key = null; dialog.auto = null; $('#dTimer').hidden = true; setTimeout(() => onPick(i), 150); };
     list.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = '<kbd>' + (i + 1) + '</kbd>' + c; b.addEventListener('click', () => pick(i)); box.appendChild(b); });
     $('#dTimer').hidden = false; const bar = $('#dBar'); bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)';
     requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = 'transform ' + secs + 's linear'; bar.style.transform = 'scaleX(0)'; }));
     dialog.key = e => { const n = parseInt(e.key, 10); if (n >= 1 && n <= list.length) pick(n - 1); };
     dialog.auto = () => pick(def);
   },
-  hide() { $('#dialog').hidden = true; dialog.key = null; dialog.auto = null; }
+  hide() { $('#dialog').hidden = true; dialog.key = null; dialog.auto = null; dialog.next = null; $('#dHint').hidden = true; $('#dialog').classList.remove('talking'); },
+  /* play spoken lines one after another: each moves on once read, or at once on a click, Enter or Space */
+  talk(lines, onEnd) {
+    let i = -1, timer = null;
+    const readTime = text => 1300 + text.length * 40;
+    const next = () => {
+      clearTimeout(timer); i++;
+      if (i >= lines.length) { dialog.next = null; $('#dHint').hidden = true; $('#dialog').classList.remove('talking'); onEnd(); return; }
+      const [who, text, onLine] = lines[i]; if (onLine) onLine();
+      dialog.show(who, text, () => { timer = setTimeout(next, readTime(text)); });
+      $('#dHint').hidden = false; $('#dialog').classList.add('talking');
+      dialog.next = () => { const el = $('#dLine'); if (el.textContent.length < text.length) { clearInterval(el._t); el.textContent = text; clearTimeout(timer); timer = setTimeout(next, readTime(text)); } else next(); };
+    };
+    next();
+  }
 };
+$('#dialog').addEventListener('click', e => { if (dialog.next && !e.target.closest('button')) dialog.next(); });
 let photoReq = false;
 function showPhoto(url, text) {
   const p = $('#photo'); $('#photoImg').src = url; $('#photoCap').textContent = text;
@@ -1385,11 +1405,23 @@ function sdHide() { $('#sd').hidden = true; }
 function around(r, a, s, up) { return v3(r.x + r.tx * a + r.sx * s, r.y + up, r.z + r.tz * a + r.sz * s); }
 function hikerAt(u, dt, opts) { const r = W.rp(u); poseWalk(W.hiker, r.x + r.sx * 0.15, r.z + r.sz * 0.15, Math.atan2(r.tx, r.tz), dt, Object.assign({ steps: true }, opts)); return r; }
 const MOTH = [
-  { q: 'Where did you start?', a: ['Down on the coast, three weeks ago.', 'I was going over the pass to my sister’s. Not any more.'], note: '<b>Moth</b> walked up from the coast. Was going over the pass to her sister’s, then turned back.' },
-  { q: 'Why are you turning back?', a: ['The hut at the pass is boarded up. In August.', 'Someone had been sleeping in it anyway. I didn’t stay to meet them.'], note: '<b>Moth</b>: the hut at the pass is boarded up, but someone sleeps in it.' },
-  { q: 'Have you seen the blue marks?', a: ['…You’ve seen them too.', 'Don’t follow them after dark. That’s all I’ll say.'], note: '<b>Moth</b> has seen the blue marks. Won’t follow them after dark.' }
+  { q: 'Where did you start?', a: ['Down on the coast, three weeks ago.', 'I was going over the pass to my sister’s. Not any more.'], note: '<b>Thalia</b> walked up from the coast. Was going over the pass to her sister’s, then turned back.' },
+  { q: 'Why are you turning back?', a: ['The hut at the pass is boarded up. In August.', 'Someone had been sleeping in it anyway. I didn’t stay to meet them.'], note: '<b>Thalia</b>: the hut at the pass is boarded up, but someone sleeps in it.' },
+  { q: 'Have you seen the blue marks?', a: ['…You’ve seen them too.', 'Don’t follow them after dark. That’s all I’ll say.'], note: '<b>Thalia</b> has seen the blue marks. Won’t follow them after dark.' }
 ];
 const pickOf = st => MOTH[st.choice == null ? 2 : st.choice];
+/* the scene clock waits while you talk; it moves on when the conversation ends */
+function thaliaTalk(st) {
+  if (!(playing && sceneIdx === 4)) return;
+  st.hold = true; if (sceneT < 15.7) sceneT = 15.7;
+  const c = pickOf(st), w = 'Woman in yellow';
+  dialog.talk([
+    ['You', c.q],
+    [w, c.a[0], () => { if (st.choice === 2) AU.prof.mood = 'mark'; }],
+    [w, c.a[1]],
+    ['Thalia', 'I’m Thalia, by the way. Good luck up there.', () => { AU.prof.breath = false; AU.prof.mood = 'noon'; }]
+  ], () => { dialog.hide(); st.hold = false; if (playing && sceneIdx === 4) sceneT = Math.max(sceneT, 27); });
+}
 
 const DAYS = { 1: { light: 0.05, vis: 0, label: 'New moon', cls: 'new' }, 3: { light: 0.1, vis: 0, label: 'Waxing crescent', cls: 'crescent' } };
 const SCENES = [
@@ -1434,14 +1466,10 @@ const SCENES = [
 
   /* 4 */ { dur: 31, hours: [12.55, 12.75], day: 1, energy: 4, audio: { wind: 0.4, music: 0.4, mood: 'noon', breath: true },
     events: [
-      { at: 5.6, fn() { dialog.show('Moth', 'Hello. You’re heading up? Late start.'); } },
-      { at: 8.6, fn(st) { dialog.choices(MOTH.map(a => a.q), 7, 2, i => { st.choice = i; if (playing && sceneIdx === 4 && sceneT < 15.6) sceneT = 15.6; }); } },
-      { at: 15.6, fn(st) { if (st.choice == null) { if (dialog.auto) dialog.auto(); st.choice = 2; } } },
-      { at: 16.2, fn(st) { dialog.show('You', pickOf(st).q); } },
-      { at: 18.4, fn(st) { dialog.show('Moth', pickOf(st).a[0]); if (st.choice === 2) AU.prof.mood = 'mark'; } },
-      { at: 22.2, fn(st) { dialog.show('Moth', pickOf(st).a[1]); } },
-      { at: 26.4, fn() { dialog.show('Moth', 'Good luck up there.'); AU.prof.breath = false; AU.prof.mood = 'noon'; } },
-      { at: 28.4, fn(st) { dialog.hide(); setEnergy(3); toast('New in your journal', pickOf(st).note, 6); } }
+      { at: 5.6, fn() { dialog.show('Woman in yellow', 'Hello. You’re heading up? Late start.'); } },
+      { at: 8.6, fn(st) { dialog.choices(MOTH.map(a => a.q), 7, 2, i => { st.choice = i; thaliaTalk(st); }); } },
+      { at: 15.6, fn(st) { if (st.choice == null && dialog.auto) dialog.auto(); } },
+      { at: 28.4, fn(st) { setEnergy(3); toast('New in your journal', pickOf(st).note, 6); } }
     ],
     enter(st) { const r = W.rp(W.meetU); st.sgn = W.heightAt(r.x + r.sx * 9, r.z + r.sz * 9) > W.heightAt(r.x - r.sx * 9, r.z - r.sz * 9) ? 1 : -1; },
     exit() { dialog.hide(); },
@@ -1450,7 +1478,7 @@ const SCENES = [
       const r = hikerAt(W.meetU + hm / W.L, dt, { lean: 0.06 });
       const mm = 2.3 + (t < 5 ? (5 - t) * 1.1 : 0) - Math.max(0, t - 27.2) * 1.15, mr = W.rp(W.meetU + mm / W.L);
       poseWalk(W.moth, mr.x - mr.sx * 0.55, mr.z - mr.sz * 0.55, Math.atan2(-mr.tx, -mr.tz), dt, { steps: true, stepVol: 0.5 });
-      const talking = t > 2.5 && t < 28.2;
+      const talking = t > 2.5 && (t < 28.2 || st.hold);
       look(W.hiker, talking ? headOf(W.moth) : null, dt); look(W.moth, talking ? headOf(W.hiker) : null, dt);
       const mid = v3((r.x + mr.x) / 2, (r.y + mr.y) / 2, (r.z + mr.z) / 2), M = W.rp(W.meetU + 1.2 / W.L);
       return { pos: v3(mid.x + M.sx * st.sgn * 6.5 + M.tx * 0.5, mid.y + 1.9, mid.z + M.sz * st.sgn * 6.5 + M.tz * 0.5), look: v3(mid.x, mid.y + 1.25, mid.z) };
@@ -1513,7 +1541,7 @@ const SCENES = [
 
   /* 9: a beer by the fire, an early night */
   { dur: 17, hours: [21.1, 21.5], day: 1, energy: 2, audio: { wind: 0.08, fire: 0.6, music: 0.55, mood: 'camp' },
-    captions: [[1.6, () => '21:15. Tent up, fire lit.'], [5.4, () => 'The beer I carried all day was worth it.'], [10, () => 'Thinking about Moth. And the blue marks.'], [14, () => 'Early night.']],
+    captions: [[1.6, () => '21:15. Tent up, fire lit.'], [5.4, () => 'The beer I carried all day was worth it.'], [10, () => 'Thinking about Thalia. And the blue marks.'], [14, () => 'Early night.']],
     events: [{ at: 2.6, fn() { if (AU.on) canOpen(); } }],
     update(t, s, dt) {
       const sp = W.sitPos, f = W.firePos, H = W.hiker;
@@ -1752,7 +1780,7 @@ function frame(nowMs) {
   if (playing && sceneIdx >= 0) {
     const sc = SCENES[sceneIdx];
     if (capQ.length && !paused) doCapture(capQ.shift());
-    sceneT += dt;
+    if (!st.hold) sceneT += dt;
     const s = clamp(sceneT / sc.dur, 0, 1), hour = lerp(sc.hours[0], sc.hours[1], s);
     light = applyTime(hour);
     if (sc.inside) { W.hemi.intensity *= 0.1; W.dir.intensity *= 0.12; }
@@ -1820,7 +1848,10 @@ $('#bSkip').addEventListener('click', () => { if (playing) nextScene(); });
 $('#bSound').addEventListener('click', () => { AU.muted = !AU.muted; $('#bSound').textContent = AU.muted ? 'Sound on' : 'Sound off'; if (AU.master) AU.master.gain.setTargetAtTime(AU.muted ? 0 : 0.9, now(), 0.1); });
 window.addEventListener('keydown', e => {
   if (!playing) return;
-  if (dialog.key && !$('#dialog').hidden) dialog.key(e);
+  if (!$('#dialog').hidden) {
+    if (dialog.key) dialog.key(e);
+    if (dialog.next && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); dialog.next(); return; }
+  }
   if (e.key === ' ' && e.target === document.body) { e.preventDefault(); $('#bPause').click(); }
   if (e.key === 'ArrowRight') $('#bSkip').click();
 });

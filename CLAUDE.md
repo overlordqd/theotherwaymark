@@ -9,7 +9,8 @@ index.html          landing page (links to the showreel until the game is playab
 src/main.ts         landing page script; the game entry will live in src/
 showreel/index.html the working prototype: one self-contained page, about 5 minutes,
                     plays by itself. Reference for look, sound and pacing.
-docs/DESIGN.md      design: tone, world, systems, music modes, mystery, roadmap
+docs/DESIGN.md      design: tone, world, systems, wildlife, weather, music, mystery, roadmap
+docs/CHARACTERS.md  the thirteen people of the valley: who they are, what they know
 .github/workflows/pages.yml  builds and deploys to GitHub Pages on pushes to main
 ```
 
